@@ -286,18 +286,26 @@ export function tinStats(tin: Tin): TinStats {
 
 /** The outer and inner edges of a TIN: sides that belong to only 1 triangle, as point index pairs. */
 export function tinBoundary(tin: Tin): [number, number][] {
-  const seen = new Map<string, [number, number]>();
+  // Numeric keys: a million triangles in under a second, where text keys take several.
+  const count = tin.points.length / 3;
+  const seen = new Map<number, number>();
   const { triangles } = tin;
   for (let t = 0; t < triangles.length; t += 3) {
     for (let k = 0; k < 3; k++) {
       const a = triangles[t + k]!;
       const b = triangles[t + ((k + 1) % 3)]!;
-      const key = a < b ? `${a},${b}` : `${b},${a}`;
+      const key = a < b ? a * count + b : b * count + a;
       if (seen.has(key)) seen.delete(key);
-      else seen.set(key, [a, b]);
+      else seen.set(key, a);
     }
   }
-  return [...seen.values()];
+  const out: [number, number][] = [];
+  for (const [key, a] of seen) {
+    const lo = Math.floor(key / count);
+    const hi = key - lo * count;
+    out.push([a, a === lo ? hi : lo]);
+  }
+  return out;
 }
 
 /** Height of the surface at a point in plan, or null outside it. */
