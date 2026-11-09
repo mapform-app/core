@@ -7,6 +7,7 @@ This package holds the parts that do not depend on the user interface:
 - **Units** - metres, international feet and US survey feet, with exact conversion factors.
 - **Coordinate systems** - a registry of 1,150+ projected systems generated from the EPSG database (Polish CS2000 and CS92, all US State Plane zones on NAD83 and NAD83(2011), ETRS89 and WGS 84 UTM, British National Grid) plus common vertical datums.
 - **Project settings** - validation and the values that go into `IfcMapConversion`, so a model lands in the right place on the map.
+- **Terrain** - survey point files (PNEZD, PENZD, NEZ, XYZ, with decimal commas), LandXML surfaces from Civil 3D and OpenRoads, Delaunay TIN with a maximum edge length, statistics, outline and height at a point.
 
 ## Install
 

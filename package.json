@@ -29,6 +29,7 @@
     "generate:crs": "python3 scripts/generate_crs.py"
   },
   "dependencies": {
+    "delaunator": "^5.1.0",
     "proj4": "^2.22.0"
   },
   "devDependencies": {
