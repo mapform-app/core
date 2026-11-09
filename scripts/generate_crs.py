@@ -49,6 +49,13 @@ EXPLICIT_VERTICAL = [
 STATE_PLANE = re.compile(r"^NAD83(\(2011\))? / [A-Z]")
 
 
+def with_shift(code: int, proj4: str) -> str:
+    shift = TOWGS84.get(code)
+    if not shift or "+towgs84" in proj4:
+        return proj4
+    return proj4.replace(" +units=", f" {shift} +units=", 1)
+
+
 def unit_of(crs: CRS) -> str | None:
     if not crs.axis_info:
         return None
@@ -58,6 +65,13 @@ def unit_of(crs: CRS) -> str | None:
 def area_of(crs: CRS) -> str:
     area = crs.area_of_use
     return area.name if area else ""
+
+
+# Datum shifts to WGS 84 that PROJ strings leave out, where leaving them out moves a point by
+# more than a few metres on the map. OSGB36: EPSG transformation 1314 (about 2 m accuracy).
+TOWGS84 = {
+    27700: "+towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489",
+}
 
 
 def projected_entry(code: int) -> dict | None:
@@ -71,7 +85,9 @@ def projected_entry(code: int) -> dict | None:
         "kind": "projected",
         "unit": unit,
         "area": area_of(crs),
-        "proj4": crs.to_proj4().replace(" +type=crs", ""),
+        "proj4": with_shift(code, crs.to_proj4().replace(" +type=crs", "")),
+        "datum": crs.datum.name if crs.datum else None,
+        "projection": crs.coordinate_operation.name if crs.coordinate_operation else None,
     }
 
 

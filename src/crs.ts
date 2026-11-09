@@ -11,6 +11,10 @@ export interface CrsDefinition {
   area: string;
   /** PROJ definition. Present for projected systems only. */
   proj4?: string;
+  /** Geodetic datum, e.g. "Ordnance Survey of Great Britain 1936". Projected systems only. */
+  datum?: string | null;
+  /** Map projection, e.g. "British National Grid". Projected systems only. */
+  projection?: string | null;
 }
 
 const BY_CODE = new Map<number, CrsDefinition>(CRS_REGISTRY.map((c) => [c.epsg, c]));
