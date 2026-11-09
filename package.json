@@ -1,0 +1,41 @@
+{
+  "name": "@mapform/core",
+  "version": "0.1.0",
+  "description": "Units, coordinate systems and project settings for Mapform, a web platform for infrastructure design in IFC 4.3.",
+  "license": "AGPL-3.0-only",
+  "author": "Bartek Kulig",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mapform-app/core.git"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "generate:crs": "python3 scripts/generate_crs.py"
+  },
+  "dependencies": {
+    "proj4": "^2.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
