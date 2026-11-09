@@ -329,3 +329,94 @@ export function elevationAt(tin: Tin, x: number, y: number): number | null {
   }
   return null;
 }
+
+/** A raster of heights: rows from the top, columns from the left. */
+export interface HeightGrid {
+  width: number;
+  height: number;
+  values: ArrayLike<number>;
+  /** Value of cells with no height, besides NaN. */
+  noData: number | null;
+  /** Map position of the centre of the top-left cell. */
+  originX: number;
+  originY: number;
+  /** Size of a cell in map units; cellY is positive and counts downwards. */
+  cellX: number;
+  cellY: number;
+}
+
+/**
+ * A TIN of a height grid: 2 triangles per cell with 4 heights, 1 where a corner is missing.
+ * Every step-th row and column is kept, so a fine grid can be made lighter.
+ */
+export function gridToTin(grid: HeightGrid, step = 1): Tin {
+  const s = Math.max(1, Math.floor(step));
+  const cols = Math.floor((grid.width - 1) / s) + 1;
+  const rows = Math.floor((grid.height - 1) / s) + 1;
+  const index = new Int32Array(cols * rows).fill(-1);
+  const coords: number[] = [];
+  const valid = (v: number) => Number.isFinite(v) && (grid.noData === null || Math.abs(v - grid.noData) > 1e-6) && v > -1e30;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const v = grid.values[r * s * grid.width + c * s]!;
+      if (!valid(v)) continue;
+      index[r * cols + c] = coords.length / 3;
+      coords.push(grid.originX + c * s * grid.cellX, grid.originY - r * s * grid.cellY, v);
+    }
+  }
+  const tris: number[] = [];
+  for (let r = 0; r + 1 < rows; r++) {
+    for (let c = 0; c + 1 < cols; c++) {
+      const a = index[r * cols + c]!; // top left
+      const b = index[r * cols + c + 1]!; // top right
+      const d = index[(r + 1) * cols + c]!; // bottom left
+      const e = index[(r + 1) * cols + c + 1]!; // bottom right
+      // Counter-clockwise from above: x to the right, y up the map (rows go down).
+      if (a >= 0 && d >= 0 && e >= 0) tris.push(a, d, e);
+      if (a >= 0 && e >= 0 && b >= 0) tris.push(a, e, b);
+      if (a < 0 && b >= 0 && d >= 0 && e >= 0) tris.push(b, d, e);
+      if (e < 0 && a >= 0 && b >= 0 && d >= 0) tris.push(a, d, b);
+    }
+  }
+  return { points: Float64Array.from(coords), triangles: Uint32Array.from(tris) };
+}
+
+/** Reads an ESRI ASCII grid (.asc), as the Geoportal and many GIS tools give elevation models. */
+export function parseAsciiGrid(text: string): HeightGrid {
+  const header: Record<string, number> = {};
+  let pos = 0;
+  for (;;) {
+    const end = text.indexOf('\n', pos);
+    const line = text.slice(pos, end < 0 ? undefined : end).trim();
+    const m = /^([a-z_]+)\s+(-?[\d.eE+-]+)$/i.exec(line);
+    if (!m) break;
+    header[m[1]!.toLowerCase()] = Number(m[2]);
+    if (end < 0) break;
+    pos = end + 1;
+  }
+  const width = header.ncols;
+  const height = header.nrows;
+  const cellX = header.cellsize ?? header.dx;
+  const cellY = header.cellsize ?? header.dy;
+  if (!width || !height || !cellX || !cellY) throw new Error('Not an ASCII grid: ncols, nrows or cellsize missing');
+  const centre = header.xllcenter !== undefined;
+  const xll = centre ? header.xllcenter! : header.xllcorner! + cellX / 2;
+  const yll = centre ? header.yllcenter! : header.yllcorner! + cellY / 2;
+  if (!Number.isFinite(xll) || !Number.isFinite(yll)) throw new Error('Not an ASCII grid: no lower-left corner');
+  const values = new Float32Array(width * height);
+  let n = 0;
+  const body = text.slice(pos);
+  const re = /[^\s]+/g;
+  for (let m = re.exec(body); m && n < values.length; m = re.exec(body)) values[n++] = Number(m[0]);
+  if (n < values.length) throw new Error(`ASCII grid ends early: ${n} of ${values.length} values`);
+  return {
+    width,
+    height,
+    values,
+    noData: header.nodata_value ?? null,
+    originX: xll,
+    originY: yll + (height - 1) * cellY,
+    cellX,
+    cellY,
+  };
+}

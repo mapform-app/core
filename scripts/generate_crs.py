@@ -35,6 +35,8 @@ EXPLICIT_PROJECTED = [
 EXPLICIT_PROJECTED += list(range(25828, 25839))  # ETRS89 / UTM 28N-38N
 EXPLICIT_PROJECTED += list(range(32601, 32661))  # WGS 84 / UTM north
 EXPLICIT_PROJECTED += list(range(32701, 32761))  # WGS 84 / UTM south
+EXPLICIT_PROJECTED += list(range(26901, 26924))  # NAD83 / UTM 1N-23N (USGS 3DEP 1 m elevation)
+EXPLICIT_PROJECTED += list(range(6330, 6349))    # NAD83(2011) / UTM 59N-19N
 
 # Vertical systems picked explicitly.
 EXPLICIT_VERTICAL = [

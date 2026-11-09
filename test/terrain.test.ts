@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   elevationAt,
+  gridToTin,
+  parseAsciiGrid,
   parseLandXml,
   parsePoints,
   tinBoundary,
@@ -94,5 +96,44 @@ describe('LandXML', () => {
     expect(s!.triangles.length).toBe(6);
     for (let t = 0; t < s!.triangles.length; t += 3) expect(signedArea(s!.points, s!.triangles, t)).toBeGreaterThan(0);
     expect(tinStats(s!).area).toBeCloseTo(100, 9);
+  });
+});
+
+describe('height grids', () => {
+  const asc = `ncols 4
+nrows 3
+xllcorner 7424400
+yllcorner 5548100
+cellsize 1
+NODATA_value -9999
+10 11 12 13
+20 21 22 -9999
+30 31 32 33
+`;
+
+  it('reads an ESRI ASCII grid with cell centres and no-data', () => {
+    const g = parseAsciiGrid(asc);
+    expect([g.width, g.height, g.cellX]).toEqual([4, 3, 1]);
+    // The top row is the north row: its centre is half a cell below the top edge.
+    expect([g.originX, g.originY]).toEqual([7424400.5, 5548102.5]);
+    expect(g.values[7]).toBe(-9999);
+  });
+
+  it('triangulates a grid, leaving out cells with no height', () => {
+    const tin = gridToTin(parseAsciiGrid(asc));
+    const s = tinStats(tin);
+    expect(s.points).toBe(11);
+    // 6 cells: 4 whole (8 triangles), 2 touching the missing corner (1 triangle each).
+    expect(s.triangles).toBe(10);
+    expect(s.minZ).toBe(10);
+    for (let t = 0; t < tin.triangles.length; t += 3) expect(signedArea(tin.points, tin.triangles, t)).toBeGreaterThan(0);
+    // The south-west corner cell centre is (x 7424400.5, y 5548100.5) with height 30.
+    expect(elevationAt(tin, 7424400.5, 5548100.5)).toBeCloseTo(30, 9);
+    expect(elevationAt(tin, 7424401, 5548101)).toBeCloseTo((30 + 31 + 20 + 21) / 4, 9);
+  });
+
+  it('keeps every step-th row and column', () => {
+    const tin = gridToTin(parseAsciiGrid(asc), 2);
+    expect(tinStats(tin).points).toBe(4);
   });
 });
