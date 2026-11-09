@@ -33,6 +33,7 @@
     "proj4": "^2.22.0"
   },
   "devDependencies": {
+    "@types/node": "^22.20.5",
     "typescript": "^5.9.3",
     "vitest": "^5.1.0"
   },
